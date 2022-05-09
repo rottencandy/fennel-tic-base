@@ -3,14 +3,17 @@
 ;; desc: test
 ;; script: fennel
 
-(var t 0)
+; Globals {{{
+
 (var x 96)
 (var y 24)
+
+; }}}
 
 ; Macros {{{
 
 (macro enum [...]
-  "Create 1-indexed enums for given array of keys
+  "Create 1-indexed enums for given array of keys.
 
   Usage:
     (enum E1 E2 E3)
@@ -22,12 +25,35 @@
 
 ; Utils {{{
 
+(fn state-machine [states-tbl]
+  "State machine.
+  Use with `enum`."
+  (var state 1)
+  (fn [...]
+    (let [next ((. states-tbl state) ...)]
+      (if next (set state next)))
+    state))
+
+(fn lerp [a b mu]
+  "Linear interpolation."
+  (+ (* a (- 1 mu)) (* b mu)))
 
 ; }}}
 
 ; Main {{{
 
-(global TIC
+(enum SPR1 SPR2)
+(local spr-state
+  (state-machine
+    { SPR1 (fn [is-btn-pressed?]
+            (spr 2 x y 14 3 0 0 2 2)
+            (if is-btn-pressed? SPR2))
+      SPR2 (fn [is-btn-pressed?]
+            (spr 0 x y 14 3 0 0 2 2)
+            (if is-btn-pressed? SPR1))}))
+
+
+(set _G.TIC
   (fn []
     (cls 13)
 
@@ -40,24 +66,21 @@
     (if (btn 3)
       (set x (+ x 1)))
 
-    (spr (+ 1 (* 2 (// (% t 60) 30))) x y 14 3 0 0 2 2)
-    (print "HELLO WORLD" 84 84)
-
-    (set t (+ t 1))))
+    (spr-state (btnp 4))))
 
 ; }}}
 
 ; Metadata {{{
 
 ;; <TILES>
-;; 001:eccccccccc888888caaaaaaaca888888cacccccccacc0ccccacc0ccccacc0ccc
-;; 002:ccccceee8888cceeaaaa0cee888a0ceeccca0ccc0cca0c0c0cca0c0c0cca0c0c
-;; 003:eccccccccc888888caaaaaaaca888888cacccccccacccccccacc0ccccacc0ccc
-;; 004:ccccceee8888cceeaaaa0cee888a0ceeccca0cccccca0c0c0cca0c0c0cca0c0c
-;; 017:cacccccccaaaaaaacaaacaaacaaaaccccaaaaaaac8888888cc000cccecccccec
-;; 018:ccca00ccaaaa0ccecaaa0ceeaaaa0ceeaaaa0cee8888ccee000cceeecccceeee
-;; 019:cacccccccaaaaaaacaaacaaacaaaaccccaaaaaaac8888888cc000cccecccccec
-;; 020:ccca00ccaaaa0ccecaaa0ceeaaaa0ceeaaaa0cee8888ccee000cceeecccceeee
+;; 000:eccccccccc888888caaaaaaaca888888cacccccccacccccccacc0ccccacc0ccc
+;; 001:ccccceee8888cceeaaaa0cee888a0ceeccca0ceeccca0cee0cca0cee0cca0cce
+;; 002:eccccccccc888888caaaaaaaca888888cacccccccacc0ccccacc0ccccacc0ccc
+;; 003:ccccceee8888cceeaaaa0cee888a0ceeccca0ccc0cca0c0c0cca0c0c0cca0c0c
+;; 016:cacccccccaaaaaaacaaacaaacaaaaccccaaaaaaac8888888cc000cccecccccec
+;; 017:ccca00ccaaaa0c0ccaaa0c0caaaa0c0caaaa0ccc8888ccee000cceeecccceeee
+;; 018:cacccccccaaaaaaacaaacaaacaaaaccccaaaaaaac8888888cc000cccecccccec
+;; 019:ccca00ccaaaa0ccecaaa0ceeaaaa0ceeaaaa0cee8888ccee000cceeecccceeee
 ;; </TILES>
 
 ;; <WAVES>
