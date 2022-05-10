@@ -1,12 +1,9 @@
-;; vim: fdm=marker:et:sw=2:
-;; title: test
-;; desc: test
+;; vim: fdm=marker:et:sw=2:fdl=0:
+;; title: Untitled Game
+;; desc: Test
 ;; script: fennel
 
 ; Globals {{{
-
-(var x 96)
-(var y 24)
 
 ; }}}
 
@@ -38,20 +35,56 @@
   "Linear interpolation."
   (+ (* a (- 1 mu)) (* b mu)))
 
+(fn ticker [interval]
+  "Returns true every time `interval` ticks have passed"
+  (var ticks 0)
+  (fn []
+    (set ticks (+ ticks 1))
+    (if (> ticks interval)
+      (do
+        (set ticks 0)
+        true)
+      false)))
+
+(fn generator [list]
+  "Loops over items of list."
+  (var idx 1)
+  (fn []
+    (if (>= idx (# list))
+      (set idx 1)
+      (set idx (+ idx 1)))
+    (. list idx)))
+
+(fn spr-loop [sprs interval]
+  "Return next sprite id every time `interval` ticks have passed."
+  (var cur-spr (. sprs 1))
+  (let [is-time? (ticker interval)
+        next-spr (generator sprs)]
+    (fn []
+      (if (is-time?)
+        (set cur-spr (next-spr)))
+      cur-spr)))
+
 ; }}}
 
 ; Main {{{
 
+(var x 96)
+(var y 24)
+
+(local PLAYER-SPRS [0 2])
+
 (enum SPR1 SPR2)
 (local spr-state
   (state-machine
-    { SPR1 (fn [is-btn-pressed?]
+    { SPR1 (fn [is-pressed?]
             (spr 2 x y 14 3 0 0 2 2)
-            (if is-btn-pressed? SPR2))
-      SPR2 (fn [is-btn-pressed?]
+            (if is-pressed? SPR2))
+      SPR2 (fn [is-pressed?]
             (spr 0 x y 14 3 0 0 2 2)
-            (if is-btn-pressed? SPR1))}))
+            (if is-pressed? SPR1))}))
 
+(local spr2id (spr-loop PLAYER-SPRS 60))
 
 (set _G.TIC
   (fn []
@@ -66,7 +99,9 @@
     (if (btn 3)
       (set x (+ x 1)))
 
-    (spr-state (btnp 4))))
+    (spr-state (btnp 4))
+
+    (spr (spr2id) 0 0 14 3 0 0 2 2)))
 
 ; }}}
 
