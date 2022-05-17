@@ -9,11 +9,11 @@
 
 ; Macros {{{
 
-(macro enum [...]
+(macro enum! [...]
   "Create 1-indexed enums for given array of keys.
 
   Usage:
-    (enum E1 E2 E3)
+    (enum! E1 E2 E3)
   Compiles down to:
     (local [E1 E2 E3] [1 2 3])"
   `(local ,[...] ,(icollect [i (ipairs [...])] i)))
@@ -24,12 +24,14 @@
 
 (fn state-machine [states-tbl]
   "State machine.
-  Use with `enum`."
-  (var state 1)
+  Use with `enum!`."
+  (var current (. states-tbl 1))
   (fn [...]
-    (let [next ((. states-tbl state) ...)]
-      (if next (set state next)))
-    state))
+    (let [next (current ...)]
+      (match (type next)
+        :number   (set current (. states-tbl next))
+        :function (set current next)))
+    next))
 
 (fn lerp [a b mu]
   "Linear interpolation."
@@ -43,8 +45,8 @@
     (if (> ticks interval)
       (do
         (set ticks 0)
-        true)
-      false)))
+        (values true ticks))
+      (values false ticks))))
 
 (fn generator [list]
   "Loops over items of list."
@@ -55,71 +57,76 @@
       (set idx (+ idx 1)))
     (. list idx)))
 
-(fn seq-generator [max]
-  "Loops over numbers from 1 to `max`."
-  (var idx 1)
-  (fn []
-    (if (>= idx max)
-      (set idx 1)
-      (set idx (+ idx 1)))
-    idx))
+(fn init-list [max]
+  "Create a sequential list of numbers from 1 to `max`."
+  (let [list []]
+    (for [i 1 max]
+      (table.insert list i))
+    list))
 
-(fn spr-loop [sprs interval]
-  "Return next sprite id every time `interval` ticks have passed."
-  (var cur-spr (. sprs 1))
+(fn list-loop [list interval]
+  "Loop over list item every time `interval` ticks have passed."
+  (var cur-item (. list 1))
   (let [is-time? (ticker interval)
-        next-spr (generator sprs)]
+        next-item (generator list)]
     (fn []
       (if (is-time?)
-        (set cur-spr (next-spr)))
-      cur-spr)))
+        (set cur-item (next-item)))
+      cur-item)))
 
 ; }}}
 
 ; Main {{{
 
-(var x 96)
-(var y 24)
+(local get-scroll-pos (list-loop (init-list 40) 3))
 
-(local PLAYER-SPRS [0 2])
+(fn draw-title []
+  (let [scroll-pos (- (get-scroll-pos))]
+    (map 0 0 35 22 scroll-pos scroll-pos 14))
+  (print "Game title" 42 20 13 true 2))
 
-(enum SPR1 SPR2)
-(local spr-state
+(local Player {
+                :x 96
+                :y 24
+                :sprid (list-loop [0 2] 60)})
+
+(enum! TITLE INGAME)
+(local transition-done (ticker 60))
+(local scene-state
   (state-machine
-    { SPR1 (fn [is-pressed?]
-            (spr 2 x y 14 3 0 0 2 2)
-            (if is-pressed? SPR2))
-      SPR2 (fn [is-pressed?]
-            (spr 0 x y 14 3 0 0 2 2)
-            (if is-pressed? SPR1))}))
+    { TITLE (fn []
+              (draw-title)
 
-(local spr2id (spr-loop PLAYER-SPRS 60))
+              (if (btnp 4)
+                (fn []
+                  (let [(done? amt) (transition-done)]
+                    (draw-title)
+                    (rect 0 0 240 (lerp 0 136 (/ amt 40)) 0)
 
-(var bg-pos 0)
-(local bg-update-time? (ticker 5))
-(local bg-next-pos (seq-generator 40))
+                    (if done?
+                      INGAME)))))
+
+      INGAME (fn []
+                (print "In Game" 50 50)
+
+                (if (btn 0)
+                  (set Player.y (- Player.y 1)))
+                (if (btn 1)
+                  (set Player.y (+ Player.y 1)))
+                (if (btn 2)
+                  (set Player.x (- Player.x 1)))
+                (if (btn 3)
+                  (set Player.x (+ Player.x 1)))
+
+                (spr (Player.sprid) Player.x Player.y 14 3 0 0 2 2)
+
+                nil)}))
 
 (set _G.TIC
   (fn []
     (cls 13)
 
-    (if (btn 0)
-      (set y (- y 1)))
-    (if (btn 1)
-      (set y (+ y 1)))
-    (if (btn 2)
-      (set x (- x 1)))
-    (if (btn 3)
-      (set x (+ x 1)))
-
-    (if (bg-update-time?)
-      (set bg-pos (- (bg-next-pos))))
-
-    (map 0 0 35 22 bg-pos bg-pos 14)
-
-    (spr-state (btnp 4))
-
-    (spr (spr2id) 0 0 14 3 0 0 2 2)))
+    (scene-state)))
 
 ; }}}
 
