@@ -37,6 +37,13 @@
   "Linear interpolation."
   (+ (* a (- 1 mu)) (* b mu)))
 
+(fn init-list [max]
+  "Creates a sequential list of numbers from 1 to `max`."
+  (let [list []]
+    (for [i 1 max]
+      (table.insert list i))
+    list))
+
 (fn ticker [interval]
   "Returns true every time `interval` ticks have passed"
   (var ticks 0)
@@ -52,26 +59,21 @@
   "Loops over items of list."
   (var idx 1)
   (fn []
-    (if (>= idx (# list))
-      (set idx 1)
-      (set idx (+ idx 1)))
-    (. list idx)))
+    (let [reset? (>= idx (# list))]
+      (if reset?
+        (set idx 1)
+        (set idx (+ idx 1)))
+      (values (. list idx) reset?))))
 
-(fn init-list [max]
-  "Create a sequential list of numbers from 1 to `max`."
-  (let [list []]
-    (for [i 1 max]
-      (table.insert list i))
-    list))
-
-(fn list-loop [list interval]
-  "Loop over list item every time `interval` ticks have passed."
+(fn list-loop [list ?interval]
+  "Loops over list item every time `interval`(default 1) ticks have passed."
   (var cur-item (. list 1))
-  (let [is-time? (ticker interval)
+  (let [is-time? (ticker (or ?interval 1))
         next-item (generator list)]
     (fn []
       (if (is-time?)
-        (set cur-item (next-item)))
+        (let [next (next-item)]
+          (set cur-item next)))
       cur-item)))
 
 ; }}}
@@ -79,7 +81,6 @@
 ; Main {{{
 
 (local get-scroll-pos (list-loop (init-list 40) 3))
-
 (fn draw-title []
   (let [scroll-pos (- (get-scroll-pos))]
     (map 0 0 35 22 scroll-pos scroll-pos 14))
@@ -101,7 +102,7 @@
                 (fn []
                   (let [(done? amt) (transition-done)]
                     (draw-title)
-                    (rect 0 0 240 (lerp 0 136 (/ amt 40)) 0)
+                    (rect 0 0 240 (lerp 0 136 (/ amt 60)) 0)
 
                     (if done?
                       INGAME)))))
