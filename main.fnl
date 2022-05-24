@@ -81,48 +81,54 @@
 
 ; Main {{{
 
-(local get-scroll-pos (list-loop (init-list 40) 3))
-(fn draw-title []
-  (let [scroll-pos (- (get-scroll-pos))]
-    (map 0 0 35 22 scroll-pos scroll-pos 14))
-  (shadow-print "Game title" 50 22 12 14 3))
+(local draw-title
+  (let [get-scroll-pos (list-loop (init-list 40) 3)]
+    (fn []
+      (let [scroll-pos (- (get-scroll-pos))]
+         (map 0 0 35 22 scroll-pos scroll-pos 14)
+         (shadow-print "Game title" 48 22 12 14 3)
+         (if (< (% (time) 600) 300)
+           (print "Press z to start" 72 94 12))))))
 
 (local Player {
                 :x 96
                 :y 24
                 :sprid (list-loop [0 2] 60)})
 
-(enum! TITLE INGAME)
-(local transition (ticker 90))
+;(enum! TITLE INGAME)
 (local scene-state
-  (state-machine
-    { TITLE (fn []
-              (draw-title)
+  (let [
+        TITLE 1
+        INGAME 2
+        transition (ticker 90)]
+    (state-machine
+      { TITLE (fn []
+                (draw-title)
 
-              (if (btnp 4)
-                (fn []
-                  (let [(done? amt) (transition)]
-                    (draw-title)
-                    (rect 0 0 240 (lerp 0 136 (/ amt 40)) 0)
+                (if (btnp 4)
+                  (fn []
+                    (let [(done? amt) (transition)]
+                      (draw-title)
+                      (rect 0 0 240 (lerp 0 136 (/ amt 40)) 0)
 
-                    (if done?
-                      INGAME)))))
+                      (if done?
+                        INGAME)))))
 
-      INGAME (fn []
-                (print "In Game" 50 50)
+        INGAME (fn []
+                  (print "In Game" 50 50)
 
-                (if (btn 0)
-                  (set Player.y (- Player.y 1)))
-                (if (btn 1)
-                  (set Player.y (+ Player.y 1)))
-                (if (btn 2)
-                  (set Player.x (- Player.x 1)))
-                (if (btn 3)
-                  (set Player.x (+ Player.x 1)))
+                  (if (btn 0)
+                    (set Player.y (- Player.y 1)))
+                  (if (btn 1)
+                    (set Player.y (+ Player.y 1)))
+                  (if (btn 2)
+                    (set Player.x (- Player.x 1)))
+                  (if (btn 3)
+                    (set Player.x (+ Player.x 1)))
 
-                (spr (Player.sprid) Player.x Player.y 14 3 0 0 2 2)
+                  (spr (Player.sprid) Player.x Player.y 14 3 0 0 2 2)
 
-                nil)}))
+                  nil)})))
 
 (set _G.TIC
   (fn []
