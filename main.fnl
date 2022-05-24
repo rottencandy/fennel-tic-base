@@ -3,11 +3,7 @@
 ;; desc: Test
 ;; script: fennel
 
-; Globals {{{
-
-; }}}
-
-; Macros {{{
+; Macros & Utils {{{
 
 (macro enum! [...]
   "Create 1-indexed enums for given array of keys.
@@ -17,10 +13,6 @@
   Compiles down to:
     (local [E1 E2 E3] [1 2 3])"
   `(local ,[...] ,(icollect [i (ipairs [...])] i)))
-
-; }}}
-
-; Utils {{{
 
 (fn state-machine [states-tbl]
   "State machine.
@@ -76,6 +68,15 @@
           (set cur-item next)))
       cur-item)))
 
+(fn shadow-print [text x y colfg colbg scale]
+  "Print text with shadow."
+  (print text (+ x 2) (+ y 2) colbg false scale)
+  (print text x       y       colfg false scale))
+
+; }}}
+
+; Globals {{{
+
 ; }}}
 
 ; Main {{{
@@ -84,7 +85,7 @@
 (fn draw-title []
   (let [scroll-pos (- (get-scroll-pos))]
     (map 0 0 35 22 scroll-pos scroll-pos 14))
-  (print "Game title" 42 20 13 true 2))
+  (shadow-print "Game title" 50 22 12 14 3))
 
 (local Player {
                 :x 96
@@ -92,7 +93,7 @@
                 :sprid (list-loop [0 2] 60)})
 
 (enum! TITLE INGAME)
-(local transition-done (ticker 60))
+(local transition (ticker 90))
 (local scene-state
   (state-machine
     { TITLE (fn []
@@ -100,9 +101,9 @@
 
               (if (btnp 4)
                 (fn []
-                  (let [(done? amt) (transition-done)]
+                  (let [(done? amt) (transition)]
                     (draw-title)
-                    (rect 0 0 240 (lerp 0 136 (/ amt 60)) 0)
+                    (rect 0 0 240 (lerp 0 136 (/ amt 40)) 0)
 
                     (if done?
                       INGAME)))))
@@ -125,8 +126,7 @@
 
 (set _G.TIC
   (fn []
-    (cls 13)
-
+    (cls)
     (scene-state)))
 
 ; }}}
