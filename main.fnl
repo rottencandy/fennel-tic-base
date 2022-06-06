@@ -39,7 +39,7 @@
     next))
 
 (fn lerp [a b mu]
-  "Linear interpolation."
+  "Classic linear interpolation."
   (+ (* a (- 1 mu)) (* b mu)))
 
 (fn init-list [max]
@@ -59,6 +59,22 @@
         (set ticks 0)
         (values true ticks))
       (values false ticks))))
+
+(fn oscillator [full ondur]
+  "Oscillates (flips?) between true and false given duration and on duration.
+  This uses `time`, so only works when called every frame.
+  TODO find out what this is called in gamedev jargon."
+  (< (% (time) full) ondur))
+
+(fn lerp-ticker [interval]
+  "Same as ticker but returns lerped value 0 -> 1, and then always returns true."
+  (var ticks 0)
+  (fn []
+    (if (> ticks interval)
+      (values true 1.0)
+      (do
+        (set ticks (+ ticks 1))
+        (values false (/ ticks interval))))))
 
 (fn generator [list]
   "Loops over items of list."
@@ -86,67 +102,66 @@
   (print text (+ x 2) (+ y 2) colbg false scale)
   (print text x       y       colfg false scale))
 
-; }}}
+(fn read-arrows []
+  "Returns direction if any arrow key has just been pressed, else nil."
+  (if (btnp UP)    UP
+      (btnp DOWN)  DOWN
+      (btnp LEFT)  LEFT
+      (btnp RIGHT) RIGHT
+      nil))
 
-; Globals {{{
+(fn make-screen-shake [duration intensity]
+  "Shake screen using RAM display xy offset method."
+  (let [tick (ticker duration)]
+    (fn []
+      (let [done? (tick)]
+        (if done?
+          (do
+            (memset 0x3FF9 0 2)
+            true)
+          (do
+            (poke 0x3FF9 (math.random (- intensity) intensity))
+            (poke (+ 0x3FF9 1) (math.random (- intensity) intensity))
+            false))))))
+
+(fn make-spr-shake [duration intensity]
+  (let [tick (ticker duration)]
+    (fn []
+      (let [done? (tick)]
+        (if done?
+          (values true 0 0)
+          (values
+            false
+            (math.random (- intensity) intensity)
+            (math.random (- intensity) intensity)))))))
 
 ; }}}
 
 ; Main {{{
 
-(local draw-title
-  (let [get-scroll-pos (list-loop (init-list 40) 3)]
-    (fn []
-      (let [scroll-pos (- (get-scroll-pos))]
-         (map 0 0 35 22 scroll-pos scroll-pos 14)
-         (shadow-print "Game title" 48 22 12 14 3)
-         (if (< (% (time) 600) 300)
-           (print "Press z to start" 72 94 12))))))
+(var x 20)
+(var y 20)
+(var t 0)
 
-(local Player {
-                :x 96
-                :y 24
-                :sprid (list-loop [0 2] 60)})
+(local player-st
+  (state-machine! {S0 (fn [change?]
+                        (spr 1 x y 14 3 0 0 2 2)
+                        (if change?
+                          S1))
+                   S1 (fn [change?]
+                        (spr 3 x y 14 3 0 0 2 2)
+                        (if change?
+                          S0))}
+                  S0))
 
-;(enum! TITLE INGAME)
-(local scene-state
-  (let [
-        TITLE 1
-        INGAME 2
-        transition (ticker 90)]
-    (state-machine
-      { TITLE (fn []
-                (draw-title)
-
-                (if (btnp 4)
-                  (fn []
-                    (let [(done? amt) (transition)]
-                      (draw-title)
-                      (rect 0 0 240 (lerp 0 136 (/ amt 40)) 0)
-
-                      (if done?
-                        INGAME)))))
-
-        INGAME (fn []
-                  (print "In Game" 50 50)
-
-                  (if (btn 0)
-                    (set Player.y (- Player.y 1)))
-                  (if (btn 1)
-                    (set Player.y (+ Player.y 1)))
-                  (if (btn 2)
-                    (set Player.x (- Player.x 1)))
-                  (if (btn 3)
-                    (set Player.x (+ Player.x 1)))
-
-                  (spr (Player.sprid) Player.x Player.y 14 3 0 0 2 2)
-
-                  nil)})))
-
-(set _G.TIC
-  (fn []
-    (cls)
-    (scene-state)))
+(fn _G.TIC []
+  (when (btn 0) (set y (- y 1)))
+  (when (btn 1) (set y (+ y 1)))
+  (when (btn 2) (set x (- x 1)))
+  (when (btn 3) (set x (+ x 1)))
+  (cls 0)
+  (player-st (btnp 4))
+  (set t (+ t 1)))
 
 ; }}}
 
