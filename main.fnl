@@ -27,16 +27,29 @@
   "Like x++, only works with table fields and vars."
   `(set ,val (+ ,val 1)))
 
-(fn state-machine [states-tbl]
+(macro state-machine! [states-tbl initial]
   "State machine.
-  Use with `enum!`."
-  (var current (. states-tbl 1))
-  (fn [...]
-    (let [next (current ...)]
-      (match (type next)
-        :number   (set current (. states-tbl next))
-        :function (set current next)))
-    next))
+
+  Usage:
+    (state-machine! {S0 (fn [] S1)
+                     S1 (fn [] S0)}
+                    S0)
+  "
+  (assert-compile (table? states-tbl) "expected table for states-tbl" states-tbl)
+  (assert-compile (sym? initial) "expected symbol for initial value" initial)
+
+  (let [keys# (icollect [k (pairs states-tbl)] k)
+        nums# (icollect [i (ipairs keys#)] i)]
+
+    `(let [,keys#  ,nums#
+           states# ,states-tbl]
+      (var current# (. states# ,initial))
+      (fn [...]
+        (let [next# (current# ...)]
+          (match (type next#)
+            :number   (set current# (. states# next#))
+            :function (set current# next#))
+          next#)))))
 
 (fn lerp [a b mu]
   "Classic linear interpolation."
