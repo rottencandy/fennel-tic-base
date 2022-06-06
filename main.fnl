@@ -19,6 +19,14 @@
     (local [E1 E2 E3] [1 2 3])"
   `(local ,[...] ,(icollect [i (ipairs [...])] i)))
 
+(macro --! [val]
+  "Like x--, only works with table fields and vars."
+  `(set ,val (- ,val 1)))
+
+(macro ++! [val]
+  "Like x++, only works with table fields and vars."
+  `(set ,val (+ ,val 1)))
+
 (fn state-machine [states-tbl]
   "State machine.
   Use with `enum!`."
