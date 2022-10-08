@@ -8,6 +8,19 @@
 ;; script:  fennel
 ;; strict:  true
 
+; Globals & consts {{{
+
+(local UP  0)
+(local DWN 1)
+(local LFT 2)
+(local RGT 3)
+(local A   4)
+(local B   5)
+(local X   6)
+(local Y   7)
+
+; }}}
+
 ; Macros & Utils {{{
 
 (macro enum! [...]
@@ -117,10 +130,10 @@
 
 (fn read-arrows []
   "Returns direction if any arrow key has just been pressed, else nil."
-  (if (btnp UP)    UP
-      (btnp DOWN)  DOWN
-      (btnp LEFT)  LEFT
-      (btnp RIGHT) RIGHT
+  (if (btnp UP)  UP
+      (btnp DWN) DWN
+      (btnp LFT) LFT
+      (btnp RGT) RGT
       nil))
 
 (fn make-screen-shake [duration intensity]
@@ -168,10 +181,10 @@
                   S0))
 
 (fn _G.TIC []
-  (when (btn 0) (set y (- y 1)))
-  (when (btn 1) (set y (+ y 1)))
-  (when (btn 2) (set x (- x 1)))
-  (when (btn 3) (set x (+ x 1)))
+  (when (btn UP)  (set y (- y 1)))
+  (when (btn DWN) (set y (+ y 1)))
+  (when (btn LFT) (set x (- x 1)))
+  (when (btn RGT) (set x (+ x 1)))
   (cls 0)
   (player-st (btnp 4))
   (set t (+ t 1)))
