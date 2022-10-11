@@ -40,29 +40,48 @@
   "Like x++, only works with table fields and vars."
   `(set ,val (+ ,val 1)))
 
-(macro state-machine! [states-tbl initial]
+(fn SM [states-tbl]
   "State machine.
+  First state is the initial state.
+  Use with (enum!).
 
   Usage:
-    (state-machine! {S0 (fn [] S1)
-                     S1 (fn [] S0)}
-                    S0)
+    (SM {S1 (fn [] S2)
+         S2 (fn [] S1)})
   "
-  (assert-compile (table? states-tbl) "expected table for states-tbl" states-tbl)
-  (assert-compile (sym? initial) "expected symbol for initial value" initial)
+  (var current (. states-tbl 1))
+  { :run (fn [...]
+           (let [next (current ...)]
+             (match (type next)
+               :number   (set current (. states-tbl next))
+               :function (set current next))
+             next))
+    :set (fn [k] (set current (. states-tbl k)))})
 
-  (let [keys# (icollect [k (pairs states-tbl)] k)
-        nums# (icollect [i (ipairs keys#)] i)]
-
-    `(let [,keys#  ,nums#
-           states# ,states-tbl]
-      (var current# (. states# ,initial))
-      (fn [...]
-        (let [next# (current# ...)]
-          (match (type next#)
-            :number   (set current# (. states# next#))
-            :function (set current# next#))
-          next#)))))
+; Observer pattern.
+; Use with (enum!).
+;
+; Usage:
+;   (SIG.enable E1 (fn []))
+;   (SIG.disable E1 (fn []))
+;   (SIG.emit E1 data)
+(local SIG
+  { :callbacks []
+    :enable (fn [ev f]
+              (let [fns (. SIG.callbacks ev)]
+                (if (= fns nil)
+                  (tset SIG.callbacks ev [f])
+                  (table.insert fns f))))
+    :disable (fn [ev df]
+               (let [fns (. SIG.callbacks ev)]
+                 (each [i f (pairs fns)]
+                   (if (= f df)
+                     (table.remove fns i)))))
+    :emit (fn [ev a]
+            (let [fns (. SIG.callbacks ev)]
+              (if (not (= fns nil))
+                (each [_ f (pairs fns)]
+                  (f a)))))})
 
 (fn lerp [a b mu]
   "Classic linear interpolation."
@@ -169,16 +188,16 @@
 (var y 20)
 (var t 0)
 
-(local player-st
-  (state-machine! {S0 (fn [change?]
-                        (spr 1 x y 14 3 0 0 2 2)
-                        (if change?
-                          S1))
-                   S1 (fn [change?]
-                        (spr 3 x y 14 3 0 0 2 2)
-                        (if change?
-                          S0))}
-                  S0))
+(enum! S1 S2)
+(local s-player
+  (SM {S1 (fn [change?]
+            (spr 1 x y 14 3 0 0 2 2)
+            (if change?
+              S2))
+       S2 (fn [change?]
+            (spr 3 x y 14 3 0 0 2 2)
+            (if change?
+              S1))}))
 
 (fn _G.TIC []
   (when (btn UP)  (set y (- y 1)))
@@ -186,7 +205,7 @@
   (when (btn LFT) (set x (- x 1)))
   (when (btn RGT) (set x (+ x 1)))
   (cls 0)
-  (player-st (btnp 4))
+  (s-player.run (btnp 4))
   (set t (+ t 1)))
 
 ; }}}
