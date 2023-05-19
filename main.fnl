@@ -62,23 +62,23 @@
 ; Use with (enum!).
 ;
 ; Usage:
-;   (SIG.enable E1 (fn []))
-;   (SIG.disable E1 (fn []))
-;   (SIG.emit E1 data)
-(local SIG
+;   (_G.SIG.enable E1 (fn []))
+;   (_G.SIG.disable E1 (fn []))
+;   (_G.SIG.emit E1 data)
+(set _G.SIG
   { :callbacks []
     :enable (fn [ev f]
-              (let [fns (. SIG.callbacks ev)]
+              (let [fns (. _G.SIG.callbacks ev)]
                 (if (= fns nil)
-                  (tset SIG.callbacks ev [f])
+                  (tset _G.SIG.callbacks ev [f])
                   (table.insert fns f))))
     :disable (fn [ev df]
-               (let [fns (. SIG.callbacks ev)]
+               (let [fns (. _G.SIG.callbacks ev)]
                  (each [i f (pairs fns)]
                    (if (= f df)
                      (table.remove fns i)))))
     :emit (fn [ev a]
-            (let [fns (. SIG.callbacks ev)]
+            (let [fns (. _G.SIG.callbacks ev)]
               (if (not (= fns nil))
                 (each [_ f (pairs fns)]
                   (f a)))))})
